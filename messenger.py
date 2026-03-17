@@ -1,4 +1,6 @@
 import streamlit as st
+import base64
+import struct
 from sympy import prime
 
 # --- CORE LOGIC FUNCTIONS ---
@@ -18,18 +20,19 @@ def derive_key_from_preceding_message(preceding_message):
     return vowel_count, prime(vowel_count), f"Preceding message has {vowel_count} vowels (using P{vowel_count})"
 
 def encrypt(text, key):
-    """A simple Caesar-style shift using the prime key for the logic challenge."""
-    result = ""
-    for char in text:
-        result += chr((ord(char) + key) % 1114112)
-    return result
+    """Shift each code point and encode as base64 for safe copy-paste."""
+    shifted = [(ord(char) + key) % 1114112 for char in text]
+    packed = struct.pack(f'>{len(shifted)}I', *shifted)
+    return base64.b64encode(packed).decode('ascii')
 
 def decrypt(text, key):
-    """Reverse the Caesar-style shift."""
-    result = ""
-    for char in text:
-        result += chr((ord(char) - key) % 1114112)
-    return result
+    """Decode base64, unpack code points, and reverse the shift."""
+    packed = base64.b64decode(text.strip().encode('ascii'))
+    count = len(packed) // 4
+    if count == 0:
+        return ""
+    shifted = struct.unpack(f'>{count}I', packed)
+    return "".join(chr((cp - key) % 1114112) for cp in shifted)
 
 # --- STREAMLIT UI & STATE MANAGEMENT ---
 
